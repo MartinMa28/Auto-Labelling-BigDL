@@ -43,7 +43,6 @@ object test {
 
     Engine.init
     println(Engine.getEngineType())
-    val partitionNum = Engine.nodeNumber() * Engine.coreNumber()
 
     println("===========Load module and connect to HBase table====================")
     val model = Module.loadModule(args(2))
