@@ -3,7 +3,7 @@ import java.awt.image.{BufferedImage, DataBufferByte}
 
 import org.apache.hadoop.hbase.util.Bytes
 import HBaseHelperAPI.HBaseHelperAPI._
-import com.intel.analytics.bigdl.nn.{LogSoftMax, Module, SoftMax}
+import com.intel.analytics.bigdl.nn._
 import com.intel.analytics.bigdl.utils.{Engine, T}
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.transform.vision.image._
@@ -19,10 +19,18 @@ import scala.collection.JavaConversions._
 import java.net._
 import java.io._
 
-import com.intel.analytics.bigdl.optim.Top1Accuracy
+import com.intel.analytics.bigdl.nn.abstractnn.{AbstractModule, Activity}
+import com.intel.analytics.bigdl.utils.intermediate.IRGraph
+
 
 
 object test {
+  def modelProcessing[T](model: AbstractModule[Activity, Activity, T]): AbstractModule[Activity, Activity, T] = {
+    val m = if (!model.isInstanceOf[Graph[T]]) model.toGraph() else model
+    if (m.isInstanceOf[IRGraph[T]]) return m
+    if (!m.isInstanceOf[StaticGraph[T]] || Engine.getEngineType() == "Mklblas") return model
+    return m.asInstanceOf[StaticGraph[T]].toIRgraph().asInstanceOf[AbstractModule[Activity, Activity, T]]
+  }
 
   def main(args: Array[String]): Unit = {
     if (args.length == 0) {
@@ -45,7 +53,8 @@ object test {
     println(Engine.getEngineType())
 
     println("===========Load module and connect to HBase table====================")
-    val model = Module.loadModule(args(2))
+    var model = Module.loadModule(args(2))
+    model = test.modelProcessing(model)
     //val model = Module.load(args(2))
     val table = connectToHBase(args(0), args(1), args(3))
     println("============Finish loading===============")
