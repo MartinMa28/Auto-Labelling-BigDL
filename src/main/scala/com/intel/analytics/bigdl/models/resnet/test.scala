@@ -28,7 +28,7 @@ object test {
   def modelProcessing[T](model: AbstractModule[Activity, Activity, T]): AbstractModule[Activity, Activity, T] = {
     val m = if (!model.isInstanceOf[Graph[T]]) model.toGraph() else model
     if (m.isInstanceOf[IRGraph[T]]) return m
-    if (!m.isInstanceOf[StaticGraph[T]] || Engine.getEngineType() == "Mklblas") return model
+    if (!m.isInstanceOf[StaticGraph[T]] || Engine.getEngineType() == "MklBlas") return model
     return m.asInstanceOf[StaticGraph[T]].toIRgraph().asInstanceOf[AbstractModule[Activity, Activity, T]]
   }
 
@@ -53,9 +53,9 @@ object test {
     println(Engine.getEngineType())
 
     println("===========Load module and connect to HBase table====================")
-    var model = Module.loadModule(args(2))
-    model = test.modelProcessing(model)
-    //val model = Module.load(args(2))
+    val model = Module.loadModule(args(2))
+    //model = test.modelProcessing(model)
+
     val table = connectToHBase(args(0), args(1), args(3))
     println("============Finish loading===============")
 
