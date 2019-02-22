@@ -23,7 +23,7 @@ object TrainKfbio {
   Logger.getLogger("com.intel.analytics.bigdl.optim").setLevel(Level.INFO)
   val logger = Logger.getLogger(getClass)
 
-  import Utils._
+  import Utils2._
 
   def imageNetDecay(epoch: Int): Double = {
     if (epoch >= 80) {
@@ -46,7 +46,7 @@ object TrainKfbio {
 
       val batchSize = param.batchSize
       val (imageSize, dataSetType, maxEpoch, dataSet) =
-        (224, DatasetType.ImageNet, param.nepochs, ImageNetDataSet)
+        (224, DatasetType.ImageNet, param.nepochs, ImageNetDataSet2)
 
       //val trainDataSet = dataSet.trainDataSet(param.folder + "/train", sc, imageSize, batchSize)
       //val validateSet = dataSet.valDataSet(param.folder + "/val", sc, imageSize, batchSize)

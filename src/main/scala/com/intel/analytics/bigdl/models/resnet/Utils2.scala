@@ -9,7 +9,7 @@ import scopt.OptionParser
 
 import scala.collection.mutable.ArrayBuffer
 
-object Utils {
+object Utils2 {
   case class TrainParams(
                           folder: String = "./",
                           checkpoint: Option[String] = None,

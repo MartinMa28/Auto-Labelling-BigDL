@@ -1,10 +1,11 @@
 
 package com.intel.analytics.bigdl.models.resnet
 
-import com.intel.analytics.bigdl.DataSet
+import com.intel.analytics.bigdl.{DataSet, dataset}
 import com.intel.analytics.bigdl.dataset._
 import com.intel.analytics.bigdl.dataset.image._
 import com.intel.analytics.bigdl.dataset.image.{HFlip => JHFlip}
+import com.intel.analytics.bigdl.dataset.DataSet.SeqFileFolder2
 import com.intel.analytics.bigdl.transform.vision.image.{MTImageFeatureToBatch, MatToTensor, PixelBytesToMat}
 import com.intel.analytics.bigdl.transform.vision.image.augmentation._
 import org.apache.spark.SparkContext
@@ -34,7 +35,7 @@ object Cifar10DataSet extends ResNetDataSet {
   override def trainDataSet(path: String, batchSize: Int, size: Int)
   : DataSet[MiniBatch[Float]] = {
 
-    DataSet.array(Utils.loadTrain(path))
+    dataset.DataSet.array(Utils2.loadTrain(path))
       .transform(BytesToBGRImg())
       .transform(BGRImgNormalizer(trainMean, trainStd))
       .transform(JHFlip(0.5))
@@ -45,7 +46,7 @@ object Cifar10DataSet extends ResNetDataSet {
   override def valDataSet(path: String, batchSize: Int, size: Int)
   : DataSet[MiniBatch[Float]] = {
 
-    DataSet.array(Utils.loadTest(path))
+    dataset.DataSet.array(Utils2.loadTest(path))
       .transform(BytesToBGRImg())
       .transform(BGRImgNormalizer(testMean, testStd))
       .transform(BGRImgToBatch(batchSize))
@@ -54,7 +55,7 @@ object Cifar10DataSet extends ResNetDataSet {
   override def valDataSet(path: String, sc: SparkContext, imageSize: Int, batchSize: Int)
   : DataSet[MiniBatch[Float]] = {
 
-    DataSet.array(Utils.loadTest(path), sc)
+    dataset.DataSet.array(Utils2.loadTest(path), sc)
       .transform(BytesToBGRImg())
       .transform(BGRImgNormalizer(trainMean, trainStd))
       .transform(BGRImgToBatch(batchSize))
@@ -63,7 +64,7 @@ object Cifar10DataSet extends ResNetDataSet {
   override def trainDataSet(path: String, sc: SparkContext, imageSize: Int, batchSize: Int)
   : DataSet[MiniBatch[Float]] = {
 
-    DataSet.array(Utils.loadTrain(path), sc)
+    dataset.DataSet.array(Utils2.loadTrain(path), sc)
       .transform(BytesToBGRImg())
       .transform(BGRImgNormalizer(testMean, testStd))
       .transform(JHFlip(0.5))
@@ -72,7 +73,7 @@ object Cifar10DataSet extends ResNetDataSet {
   }
 }
 
-object ImageNetDataSet extends ResNetDataSet {
+object ImageNetDataSet2 extends ResNetDataSet {
 
   val trainMean = (0.485, 0.456, 0.406)
   val trainStd = (0.229, 0.224, 0.225)
@@ -82,7 +83,7 @@ object ImageNetDataSet extends ResNetDataSet {
   override def trainDataSet(path: String, batchSize: Int, size: Int)
   : DataSet[MiniBatch[Float]] = {
 
-    DataSet.array(Utils.loadTrain(path))
+    dataset.DataSet.array(Utils2.loadTrain(path))
       .transform(BytesToBGRImg())
       .transform(BGRImgNormalizer(trainMean, trainStd))
       .transform(JHFlip(0.5))
@@ -93,7 +94,7 @@ object ImageNetDataSet extends ResNetDataSet {
   override def valDataSet(path: String, batchSize: Int, size: Int)
   : DataSet[MiniBatch[Float]] = {
 
-    DataSet.array(Utils.loadTest(path))
+    dataset.DataSet.array(Utils2.loadTest(path))
       .transform(BytesToBGRImg())
       .transform(BGRImgNormalizer(testMean, testStd))
       .transform(BGRImgToBatch(batchSize))
@@ -101,7 +102,7 @@ object ImageNetDataSet extends ResNetDataSet {
 
   override def valDataSet(path: String, sc: SparkContext, imageSize: Int, batchSize: Int)
   : DataSet[MiniBatch[Float]] = {
-    DataSet.SeqFileFolder.filesToImageFeatureDataset(path, sc, 2).transform(
+    SeqFileFolder2.filesToImageFeatureDataset(path, sc, 2).transform(
       MTImageFeatureToBatch(
         width = imageSize,
         height = imageSize,
@@ -117,7 +118,7 @@ object ImageNetDataSet extends ResNetDataSet {
 
   override def trainDataSet(path: String, sc: SparkContext, imageSize: Int, batchSize: Int)
   : DataSet[MiniBatch[Float]] = {
-    DataSet.SeqFileFolder.filesToImageFeatureDataset(path, sc, 2).transform(
+    SeqFileFolder2.filesToImageFeatureDataset(path, sc, 2).transform(
       MTImageFeatureToBatch(
         width = imageSize,
         height = imageSize,
@@ -133,7 +134,7 @@ object ImageNetDataSet extends ResNetDataSet {
 
   def valD(rdd: RDD[String], sc: SparkContext, imageSize: Int, batchSize: Int)
   : DataSet[MiniBatch[Float]] = {
-    DataSet.SeqFileFolder.rddToImageFeatureDataset(rdd, sc, 2).transform(
+    SeqFileFolder2.rddToImageFeatureDataset(rdd, sc, 2).transform(
       MTImageFeatureToBatch(
         width = imageSize,
         height = imageSize,
@@ -149,7 +150,7 @@ object ImageNetDataSet extends ResNetDataSet {
 
   def trainD(rdd: RDD[String], sc: SparkContext, imageSize: Int, batchSize: Int)
   : DataSet[MiniBatch[Float]] = {
-    DataSet.SeqFileFolder.rddToImageFeatureDataset(rdd, sc, 2).transform(
+    SeqFileFolder2.rddToImageFeatureDataset(rdd, sc, 2).transform(
       MTImageFeatureToBatch(
         width = imageSize,
         height = imageSize,

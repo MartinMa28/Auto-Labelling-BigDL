@@ -3,13 +3,13 @@ package com.intel.analytics.bigdl.dataset
 import java.awt.image.{BufferedImage, DataBufferByte}
 import java.nio.ByteBuffer
 import java.nio.file.{Files, Path, Paths}
-import java.util.concurrent.atomic.AtomicInteger
 
 import com.intel.analytics.bigdl.DataSet
+import com.intel.analytics.bigdl.dataset._
 import com.intel.analytics.bigdl.dataset.image.{BGRImage, LabeledBGRImage, LocalImageFiles, LocalLabeledImagePath}
 import com.intel.analytics.bigdl.tensor.Tensor
 import com.intel.analytics.bigdl.transform.vision.image.{DistributedImageFrame, ImageFeature, ImageFrame, LocalImageFrame}
-import com.intel.analytics.bigdl.utils.{Engine, RandomGenerator, T}
+import com.intel.analytics.bigdl.utils.{Engine, T}
 import javax.imageio.ImageIO
 import org.apache.hadoop.io.Text
 import org.apache.log4j.Logger
@@ -19,294 +19,12 @@ import org.apache.spark.rdd.RDD
 import scala.reflect.{ClassTag, classTag}
 import scala.util.Random
 
-/**
-  * A set of data which is used in the model optimization process. The dataset can be access in
-  * a random data sample sequence. In the training process, the data sequence is a looped endless
-  * sequence. While in the validation process, the data sequence is a limited length sequence.
-  * User can use the data() method to get the data sequence.
-  *
-  * The sequence of the data is not fixed. It can be changed by the shuffle() method.
-  *
-  * User can create a dataset from a RDD, an array and a folder, etc. The DataSet object provides
-  * many factory methods.
-  *
-  * @tparam D Data type
-  * @tparam DataSequence Represent a sequence of data
-  */
-trait AbstractDataSet[D, DataSequence] {
-  /**
-    * Get a sequence of data
-    *
-    * @param train if the data is used in train. If yes, the data sequence is a looped endless
-    *              sequence, or it has a limited length.
-    * @return data sequence
-    */
-  def data(train: Boolean): DataSequence
 
-  /**
-    * Change the order of the data sequence from the data set
-    */
-  def shuffle(): Unit
-
-  /**
-    * Total size of the data set
-    * @return
-    */
-  def size(): Long
-
-  /**
-    * Helper function to transform the data type in the data set.
-    * @param transformer
-    * @tparam C
-    * @return
-    */
-  def transform[C: ClassTag](transformer: Transformer[D, C]): DataSet[C]
-
-  // scalastyle:off methodName
-  // scalastyle:off noSpaceBeforeLeftBracket
-  /**
-    * Helper function to transform the data type in the data set.
-    *
-    * @param transformer
-    * @tparam C
-    * @return
-    */
-  def -> [C: ClassTag](transformer: Transformer[D, C]): DataSet[C] = {
-    this.transform(transformer)
-  }
-
-  // scalastyle:on noSpaceBeforeLeftBracket
-  // scalastyle:on methodName
-
-  /**
-    * Convert current DataSet to a local DataSet, in which we use an iterator to represent the
-    * data sequence.
-    * @return
-    */
-  def toLocal(): LocalDataSet[D] = this.asInstanceOf[LocalDataSet[D]]
-
-  /**
-    * Convert current DataSet to a distributed DataSet, in which we use a RDD to represent the
-    * data sequence.
-    * @return
-    */
-  def toDistributed(): DistributedDataSet[D] = this.asInstanceOf[DistributedDataSet[D]]
-}
-
-/**
-  * Manage some 'local' data, e.g. data in files or memory. We use iterator to go through the data.
-  * @tparam T
-  */
-trait LocalDataSet[T] extends AbstractDataSet[T, Iterator[T]] {
-  override def transform[C: ClassTag](transformer: Transformer[T, C]): DataSet[C] = {
-    val preDataSet = this
-    new LocalDataSet[C] {
-      override def shuffle(): Unit = preDataSet.shuffle
-
-      override def size(): Long = preDataSet.size()
-
-      override def data(train: Boolean): Iterator[C] = transformer(preDataSet.data(train))
-    }
-  }
-}
-
-/**
-  * Wrap an array as a DataSet.
-  * @param buffer
-  * @tparam T
-  */
-class LocalArrayDataSet[T] private[dataset](buffer: Array[T]) extends LocalDataSet[T] {
-  override def shuffle(): Unit = {
-    RandomGenerator.shuffle(buffer)
-  }
-
-  override def data(train: Boolean): Iterator[T] = {
-    new Iterator[T] {
-      private val index = new AtomicInteger()
-
-      override def hasNext: Boolean = {
-        if (train) {
-          true
-        } else {
-          index.get() < buffer.length
-        }
-      }
-
-      override def next(): T = {
-        val curIndex = index.getAndIncrement()
-        if (train || curIndex < buffer.length) {
-          buffer(if (train) (curIndex % buffer.length) else curIndex)
-        } else {
-          null.asInstanceOf[T]
-        }
-      }
-    }
-  }
-
-  override def size(): Long = buffer.length
-}
-
-/**
-  * Represent a distributed data. Use RDD to go through all data.
-  *
-  * @tparam T
-  */
-trait DistributedDataSet[T] extends AbstractDataSet[T, RDD[T]] {
-
-  override def transform[C: ClassTag](transformer: Transformer[T, C]): DataSet[C] = {
-    val preDataSet = this
-
-    val broadcast = this.originRDD().sparkContext.broadcast(transformer)
-
-    val cachedTransformer =
-      preDataSet.originRDD().mapPartitions(_ => Iterator
-        .single(broadcast.value.cloneTransformer())
-      ).setName("Cached Transformer").persist()
-
-    new DistributedDataSet[C] {
-      override def size(): Long = preDataSet.size()
-
-      override def shuffle(): Unit = preDataSet.shuffle()
-
-      override def data(train: Boolean): RDD[C] =
-        preDataSet.data(train).zipPartitions(cachedTransformer)(
-          (data, tran) => tran.next()(data))
-
-      override def originRDD(): RDD[_] = preDataSet.originRDD()
-
-      override def cache(): Unit = {
-        cachedTransformer.count()
-        isCached = true
-      }
-
-      override def unpersist(): Unit = {
-        cachedTransformer.unpersist()
-        isCached = false
-      }
-    }
-  }
-
-  /**
-    * Get the 'origin' RDD of the dataset.
-    *
-    * @return
-    */
-  def originRDD(): RDD[_]
-
-  /**
-    * Trigger the computation of this dataset and cache it in memory.
-    */
-  def cache(): Unit = {
-    if (originRDD() != null) {
-      originRDD().count()
-    }
-    isCached = true
-  }
-
-  /**
-    * Unpersist rdd.
-    */
-  def unpersist(): Unit = {
-    if (originRDD() != null) {
-      originRDD().unpersist()
-      isCached = false
-    }
-  }
-
-  /**
-    * Check if rdd is cached.
-    */
-  var isCached = false
-}
-
-/**
-  * Wrap a RDD as a DataSet.
-  * @param buffer
-  * @param isInOrder whether need keeping original data order, default false
-  * @param groupSize offset range, from 0 until buffer.length - groupSize + 1,
-  *                  only use when need keep original order
-  * @tparam T
-  */
-class CachedDistriDataSet[T: ClassTag] private[dataset]
-(buffer: RDD[Array[T]], isInOrder: Boolean = false, groupSize: Int = 1)
-  extends DistributedDataSet[T] {
-
-  protected lazy val count: Long = buffer.mapPartitions(iter => {
-    require(iter.hasNext)
-    val array = iter.next()
-    require(!iter.hasNext)
-    Iterator.single(array.length)
-  }).reduce(_ + _)
-
-  protected var indexes: RDD[Array[Int]] = buffer.mapPartitions(iter => {
-    Iterator.single((0 until iter.next().length).toArray)
-  }).setName("original index").cache()
-
-  override def data(train: Boolean): RDD[T] = {
-    val _train = train
-    val _groupSize = if (isInOrder) Utils.getBatchSize(groupSize) else 1
-    buffer.zipPartitions(indexes)((dataIter, indexIter) => {
-      val indexes = indexIter.next()
-      val indexOffset = math.max(1, indexes.length - (_groupSize - 1))
-      val localData = dataIter.next()
-      val offset = if (_train) {
-        RandomGenerator.RNG.uniform(0, indexOffset).toInt
-      } else {
-        0
-      }
-      new Iterator[T] {
-        private val _offset = new AtomicInteger(offset)
-
-        override def hasNext: Boolean = {
-          if (_train) true else _offset.get() < localData.length
-        }
-
-        override def next(): T = {
-          val i = _offset.getAndIncrement()
-          if (_train) {
-            localData(indexes(i % localData.length))
-          } else {
-            if (i < localData.length) {
-              localData(indexes(i))
-            } else {
-              null.asInstanceOf[T]
-            }
-          }
-        }
-      }
-    })
-  }
-
-  override def size(): Long = count
-
-  override def shuffle(): Unit = {
-    if (!isInOrder) {
-      indexes.unpersist()
-      indexes = buffer.mapPartitions(iter => {
-        Iterator.single(RandomGenerator.shuffle((0 until iter.next().length).toArray))
-      }).setName("shuffled index").cache()
-    }
-  }
-
-  override def originRDD(): RDD[_] = buffer
-
-  override def cache(): Unit = {
-    buffer.count()
-    indexes.count()
-    isCached = true
-  }
-
-  override def unpersist(): Unit = {
-    buffer.unpersist()
-    indexes.unpersist()
-    isCached = false
-  }
-}
 
 /**
   * Common used DataSet builder.
   */
-object DataSet {
+object DataSet  {
   val logger = Logger.getLogger(getClass)
 
   /**
@@ -466,7 +184,7 @@ object DataSet {
   /**
     * Create a DataSet from a Hadoop sequence file folder.
     */
-  object SeqFileFolder {
+  object SeqFileFolder2 {
     val logger = Logger.getLogger(getClass)
 
     /**
