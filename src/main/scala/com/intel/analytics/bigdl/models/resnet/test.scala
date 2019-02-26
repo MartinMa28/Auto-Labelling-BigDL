@@ -53,8 +53,8 @@ object test {
     println(Engine.getEngineType())
 
     println("===========Load module and connect to HBase table====================")
-    val model = Module.loadModule(args(2))
-    //model = test.modelProcessing(model)
+    var model = Module.loadModule(args(2))
+    model = test.modelProcessing(model)
 
     val table = connectToHBase(args(0), args(1), args(3))
     println("============Finish loading===============")

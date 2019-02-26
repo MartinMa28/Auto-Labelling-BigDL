@@ -10,7 +10,7 @@ import com.intel.analytics.bigdl.utils.intermediate.IRGraph
 import org.apache.spark.SparkContext
 import com.intel.analytics.bigdl.dataset.Sample
 import com.intel.analytics.bigdl.optim.Top1Accuracy
-
+import com.intel.analytics.bigdl.models.resnet.test
 
 object ComparisonTest {
 
@@ -30,17 +30,18 @@ object ComparisonTest {
 //      ChannelScaledNormalizer(104, 117, 123, 0.0078125) ->
 //      MatToTensor[Float]() -> ImageFrameToSample()
     println("before loading")
-    val model = Module.loadModule(args(0))
+    var model = Module.loadModule(args(0))
+    model = test.modelProcessing(model)
     println("after loading")
     val dummyData = Tensor(3, 224, 224).rand()
-    val dummyLabel = Tensor(1).rand()
+    val dummyLabel = Tensor(1)
     val dummySample = Sample(dummyData, dummyLabel)
     val dummySamples = new Array[Sample[Float]](640)
     for (i <- 0 until 640) {
       dummySamples(i) = dummySample
     }
     val dummyRDD = sc.parallelize(dummySamples, 1)
-    val evaluateResult = model.evaluate(dummyRDD, Array(new Top1Accuracy))
+    val evaluateResult = model.evaluate(dummyRDD, Array(new Top1Accuracy), Some(32))
     evaluateResult.foreach(r => println(s"${r._2} is ${r._1}"))
 //    val result = model.predictImage(distributedImageFrame, batchPerPartition = 4).toDistributed()
 //    println("before collect")
@@ -49,5 +50,6 @@ object ComparisonTest {
 //    for (f <- features) {
 //      println(f("predict"))
 //    }
+    sc.stop()
   }
 }

@@ -20,17 +20,17 @@
                 <enabled>false</enabled>
             </snapshots>
         </repository>
-        <!--<repository>-->
-            <!--<id>sonatype</id>-->
-            <!--<name>sonatype repository</name>-->
-            <!--<url>https://oss.sonatype.org/content/groups/public/</url>-->
-            <!--<releases>-->
-                <!--<enabled>true</enabled>-->
-            <!--</releases>-->
-            <!--<snapshots>-->
-                <!--<enabled>true</enabled>-->
-            <!--</snapshots>-->
-        <!--</repository>-->
+        <repository>
+            <id>sonatype</id>
+            <name>sonatype repository</name>
+            <url>https://oss.sonatype.org/content/groups/public/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -38,7 +38,7 @@
             <groupId>com.intel.analytics.bigdl</groupId>
             <!--<artifactId>bigdl-SPARK_2.1</artifactId>-->
             <!--<version>0.7.0</version>-->
-            <artifactId>bigdl</artifactId>
+            <artifactId>bigdl-SPARK_2.1</artifactId>
             <version>0.8.0-SNAPSHOT</version>
         </dependency>
         <dependency>
