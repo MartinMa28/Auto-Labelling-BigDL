@@ -152,7 +152,7 @@ object test {
       })
 
       println("===========Print rdd====================")
-      val repartitionedValidateSet = validateSet.repartition(1)
+      val repartitionedValidateSet = validateSet.repartition(2)
       println("Partitions:" + repartitionedValidateSet.partitions.size)
       // distributed image frame, which is going to be sent to the model
       val distributedImageFrame = ImageFrame.rdd(repartitionedValidateSet) ->

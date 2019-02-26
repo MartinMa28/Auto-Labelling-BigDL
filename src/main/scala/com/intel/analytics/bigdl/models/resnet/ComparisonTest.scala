@@ -40,8 +40,9 @@ object ComparisonTest {
     for (i <- 0 until 640) {
       dummySamples(i) = dummySample
     }
-    val dummyRDD = sc.parallelize(dummySamples, 1)
-    val evaluateResult = model.evaluate(dummyRDD, Array(new Top1Accuracy), Some(32))
+    val dummyRDD = sc.parallelize(dummySamples, 2)
+    println("dummy RDD partitions: " + dummyRDD.partitions.size)
+    val evaluateResult = model.evaluate(dummyRDD, Array(new Top1Accuracy))
     evaluateResult.foreach(r => println(s"${r._2} is ${r._1}"))
 //    val result = model.predictImage(distributedImageFrame, batchPerPartition = 4).toDistributed()
 //    println("before collect")
