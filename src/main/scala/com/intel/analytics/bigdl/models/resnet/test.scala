@@ -163,7 +163,7 @@ object test {
         MatToTensor() -> ImageFrameToSample()
 
       println("===========transform over====================")
-      println("===========Predice Image====================")
+      println("===========Predict Image====================")
       val result = model.predictImage(distributedImageFrame).toDistributed()
 
       println("====================select keys================")

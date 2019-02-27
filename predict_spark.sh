@@ -4,8 +4,8 @@ spark-submit \
 --class com.intel.analytics.bigdl.models.resnet.test \
 --conf 'spark.driver.extraJavaOptions=-Dbigdl.engineType=mkldnn' \
 --conf 'spark.executor.extraJavaOptions=-Dbigdl.engineType=mkldnn' \
---executor-cores 12 \
---total-executor-cores 24 \
+--executor-cores 8 \
+--total-executor-cores 16 \
 /home/yilinma/Documents/IntelliJ_IDEA_Projects/Test/target/AI-Master-0.1.0-SNAPSHOT-jar-with-dependencies.jar \
 /home/yilinma/Documents/IntelliJ_IDEA_Projects/Test/core-site.xml \
 /home/yilinma/Documents/IntelliJ_IDEA_Projects/Test/hbase-site.xml \
